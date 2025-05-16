@@ -1,0 +1,106 @@
+package controller;
+
+import dao.AttendanceDAO;
+import dao.SubjectDAO;
+import dao.UserDAO;
+import model.Attendance;
+import model.Subject;
+import model.User;
+import javax.servlet.*;
+import javax.servlet.http.*;
+import javax.servlet.annotation.*;
+import java.io.IOException;
+import java.util.Date;
+import java.util.List;
+
+@WebServlet("/attendance")
+public class AttendanceServlet extends HttpServlet {
+    private AttendanceDAO attendanceDAO;
+    private SubjectDAO subjectDAO;
+    private UserDAO userDAO;
+    
+    public void init() {
+        attendanceDAO = new AttendanceDAO();
+        subjectDAO = new SubjectDAO();
+        userDAO = new UserDAO();
+    }
+    
+    protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        String action = request.getParameter("action");
+        
+        if (action == null) {
+            action = "mark"; // default action
+        }
+        
+        try {
+            switch (action) {
+                case "mark":
+                    showMarkAttendanceForm(request, response);
+                    break;
+                case "view":
+                    showStudentAttendance(request, response);
+                    break;
+                default:
+                    showMarkAttendanceForm(request, response);
+                    break;
+            }
+        } catch (Exception e) {
+            throw new ServletException(e);
+        }
+    }
+    
+    protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        String action = request.getParameter("action");
+        
+        if ("mark".equals(action)) {
+            markAttendance(request, response);
+        } else {
+            doGet(request, response);
+        }
+    }
+    
+    private void showMarkAttendanceForm(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        // Get subjects assigned to the teacher
+        HttpSession session = request.getSession();
+        int teacherId = (Integer) session.getAttribute("userId");
+        List<Subject> subjects = subjectDAO.getSubjectsByTeacher(teacherId);
+        
+        request.setAttribute("subjects", subjects);
+        RequestDispatcher dispatcher = request.getRequestDispatcher("attendance_mark.jsp");
+        dispatcher.forward(request, response);
+    }
+    
+    private void showStudentAttendance(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        HttpSession session = request.getSession();
+        int studentId = (Integer) session.getAttribute("userId");
+        List<Attendance> attendances = attendanceDAO.getAttendanceByStudent(studentId);
+        
+        request.setAttribute("attendances", attendances);
+        RequestDispatcher dispatcher = request.getRequestDispatcher("attendance_view.jsp");
+        dispatcher.forward(request, response);
+    }
+    
+    private void markAttendance(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        int subjectId = Integer.parseInt(request.getParameter("subject"));
+        Date date = new Date(); // current date
+        
+        // Get all student IDs from the request
+        String[] studentIds = request.getParameterValues("studentId");
+        
+        for (String studentIdStr : studentIds) {
+            int studentId = Integer.parseInt(studentIdStr);
+            String status = request.getParameter("status_" + studentId);
+            
+            Attendance attendance = new Attendance();
+            attendance.setStudentId(studentId);
+            attendance.setSubjectId(subjectId);
+            attendance.setDate(date);
+            attendance.setStatus(status);
+            
+            attendanceDAO.markAttendance(attendance);
+        }
+        
+        request.setAttribute("message", "Attendance marked successfully!");
+        showMarkAttendanceForm(request, response);
+    }
+}
