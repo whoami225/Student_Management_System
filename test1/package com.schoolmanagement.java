@@ -1,6 +1,3 @@
-. Model: Student.java
-
-
 package com.schoolmanagement.model;
 
 import java.util.Date;
