@@ -1,0 +1,8 @@
+<form action="AssignmentServlet" method="post" enctype="multipart/form-data">
+    Subject ID: <input type="number" name="subject_id" required><br>
+    Title: <input type="text" name="title" required><br>
+    Description:<br><textarea name="description" required></textarea><br>
+    Due Date: <input type="date" name="due_date" required><br>
+    Upload File: <input type="file" name="file" accept=".pdf,.docx" required><br>
+    <input type="submit" value="Upload Assignment">
+</form>
