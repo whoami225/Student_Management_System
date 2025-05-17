@@ -1,6 +1,6 @@
-package com.example.dao;
+package dao;
 
-import com.example.model.Student;
+import model.Student;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -129,5 +129,3 @@ public class StudentDAO {
             e.printStackTrace();
             // Handle the exception properly
         }
-    }
-}

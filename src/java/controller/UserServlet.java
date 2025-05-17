@@ -1,7 +1,7 @@
-package com.example.servlet;
+package servlet;
 
-import com.example.dao.StudentDAO;
-import com.example.model.Student;
+import dao.StudentDAO;
+import model.Student;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -129,5 +129,3 @@ public class StudentServlet extends HttpServlet {
             e.printStackTrace();
             return null; // Handle parsing error appropriately
         }
-    }
-}

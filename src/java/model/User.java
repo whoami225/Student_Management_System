@@ -1,4 +1,4 @@
-package com.example.model;
+package model;
 
 import java.util.Date;
 
@@ -71,5 +71,6 @@ public class Student {
 
     public void setAddress(String address) {
         this.address = address;
-    }
+
+
 }
