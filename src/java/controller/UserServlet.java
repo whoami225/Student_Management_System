@@ -1,66 +1,38 @@
-package controller;
-
-import dao.UserDAO;
-import model.User;
+import java.io.IOException;
+import java.util.List;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
-import javax.servlet.http.*;
-import java.io.IOException;
-import util.PasswordUtils;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 
-@WebServlet("/auth")
-public class UserServlet extends HttpServlet {
-
-    private UserDAO userDAO;
+@WebServlet("/notifications")
+public class NotificationServlet extends HttpServlet {
+    private static final long serialVersionUID = 1L;
+    private NotificationDAO notificationDAO;
 
     @Override
-    public void init() {
-        userDAO = new UserDAO();
+    public void init() throws ServletException {
+        notificationDAO = new NotificationDAO();
     }
 
-    @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        String action = request.getParameter("action");
-        if ("logout".equals(action)) {
-            request.getSession().invalidate();
-            response.sendRedirect("login.jsp");
-            return;
-        }
-        request.getRequestDispatcher("login.jsp").forward(request, response);
+        List<Notification> notifications = notificationDAO.getAllNotifications();
+        request.setAttribute("notificationList", notifications);
+        request.getRequestDispatcher("notification_list.jsp").forward(request, response);
     }
 
-    @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        String action = request.getParameter("action");
+        String title = request.getParameter("title");
+        String message = request.getParameter("message");
+        String targetRole = request.getParameter("targetRole");
 
-        if ("login".equals(action)) {
-            String email = request.getParameter("email");
-            String password = request.getParameter("password");
-            try {
-                User user = userDAO.getUserByEmail(email);
-                if (user != null && PasswordUtils.verifyPassword(password, user.getPassword())) {
-                    HttpSession session = request.getSession();
-                    session.setAttribute("user", user);
-                    // Redirect based on role
-                    switch (user.getRoleId()) {
-                        case 1 -> response.sendRedirect("dashboard_admin.jsp");
-                        case 2 -> response.sendRedirect("dashboard_teacher.jsp");
-                        case 3 -> response.sendRedirect("dashboard_student.jsp");
-                        default -> response.sendRedirect("login.jsp");
-                    }
-                } else {
-                    request.setAttribute("error", "Invalid email or password.");
-                    request.getRequestDispatcher("login.jsp").forward(request, response);
-                }
-            } catch (ClassNotFoundException e) {
-                e.printStackTrace();
-                response.sendRedirect("error.jsp");
-            }
-        } else if ("register".equals(action)) {
-            // Implement registration logic here if needed
-        }
+        Notification newNotification = new Notification(title, message, targetRole);
+        notificationDAO.addNotification(newNotification);
+
+        response.sendRedirect("notifications"); // Redirect back to the notification list
     }
 }

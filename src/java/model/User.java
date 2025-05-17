@@ -1,39 +1,84 @@
-package model;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
 
-public class User {
-    private int userId;
-    private String username;
-    private String email;
-    private String password; // store hashed password
-    private int roleId; // 1=Admin, 2=Teacher, 3=Student
-    private String fullName;
-    private String status;
+public class NotificationDAO {
 
-    public User() {}
+    private String jdbcURL = "jdbc:mysql://localhost:3306/student_management"; // Replace with your database URL
+    private String jdbcUsername = "root"; // Replace with your database username
+    private String jdbcPassword = "password"; // Replace with your database password
 
-    public User(int userId, String username, String email, String password, int roleId, String fullName, String status) {
-        this.userId = userId;
-        this.username = username;
-        this.email = email;
-        this.password = password;
-        this.roleId = roleId;
-        this.fullName = fullName;
-        this.status = status;
+    private static final String INSERT_NOTIFICATION = "INSERT INTO notifications (title, message, target_role, date_posted) VALUES (?, ?, ?, ?)";
+    private static final String SELECT_ALL_NOTIFICATIONS = "SELECT * FROM notifications ORDER BY date_posted DESC";
+    private static final String SELECT_NOTIFICATIONS_BY_ROLE = "SELECT * FROM notifications WHERE target_role = ? ORDER BY date_posted DESC";
+
+    protected Connection getConnection() {
+        Connection connection = null;
+        try {
+            Class.forName("com.mysql.cj.jdbc.Driver"); // Replace with your database driver
+            connection = DriverManager.getConnection(jdbcURL, jdbcUsername, jdbcPassword);
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return connection;
     }
 
-    // Getters and setters ...
-    public int getUserId() { return userId; }
-    public void setUserId(int userId) { this.userId = userId; }
-    public String getUsername() { return username; }
-    public void setUsername(String username) { this.username = username; }
-    public String getEmail() { return email; }
-    public void setEmail(String email) { this.email = email; }
-    public String getPassword() { return password; }
-    public void setPassword(String password) { this.password = password; }
-    public int getRoleId() { return roleId; }
-    public void setRoleId(int roleId) { this.roleId = roleId; }
-    public String getFullName() { return fullName; }
-    public void setFullName(String fullName) { this.fullName = fullName; }
-    public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
+    public void addNotification(Notification notification) {
+        try (Connection connection = getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(INSERT_NOTIFICATION)) {
+            preparedStatement.setString(1, notification.getTitle());
+            preparedStatement.setString(2, notification.getMessage());
+            preparedStatement.setString(3, notification.getTargetRole());
+            preparedStatement.setTimestamp(4, notification.getDatePosted());
+            preparedStatement.executeUpdate();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public List<Notification> getAllNotifications() {
+        List<Notification> notifications = new ArrayList<>();
+        try (Connection connection = getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(SELECT_ALL_NOTIFICATIONS);
+             ResultSet resultSet = preparedStatement.executeQuery()) {
+            while (resultSet.next()) {
+                int id = resultSet.getInt("notification_id");
+                String title = resultSet.getString("title");
+                String message = resultSet.getString("message");
+                String targetRole = resultSet.getString("target_role");
+                java.sql.Timestamp datePosted = resultSet.getTimestamp("date_posted");
+                notifications.add(new Notification(id, title, message, targetRole, datePosted));
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return notifications;
+    }
+
+    public List<Notification> getNotificationsByRole(String role) {
+        List<Notification> notifications = new ArrayList<>();
+        try (Connection connection = getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(SELECT_NOTIFICATIONS_BY_ROLE)) {
+            preparedStatement.setString(1, role);
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    int id = resultSet.getInt("notification_id");
+                    String title = resultSet.getString("title");
+                    String message = resultSet.getString("message");
+                    String targetRole = resultSet.getString("target_role");
+                    java.sql.Timestamp datePosted = resultSet.getTimestamp("date_posted");
+                    notifications.add(new Notification(id, title, message, targetRole, datePosted));
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return notifications;
+    }
 }
