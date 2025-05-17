@@ -7,6 +7,7 @@ import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.*;
 import java.io.IOException;
+import util.PasswordUtils;
 
 @WebServlet("/auth")
 public class UserServlet extends HttpServlet {
