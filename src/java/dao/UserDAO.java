@@ -1,51 +1,131 @@
 package dao;
 
-import model.User;
-import controller.DBConnection;
-
+import model.Student;
 import java.sql.*;
+import java.util.ArrayList;
+import java.util.List;
 
-public class UserDAO {
+public class StudentDAO {
 
-    public User getUserByEmail(String email) throws ClassNotFoundException {
-        String sql = "SELECT * FROM users WHERE email = ?";
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, email);
-            ResultSet rs = ps.executeQuery();
-            if (rs.next()) {
-                return new User(
-                    rs.getInt("user_id"),
-                    rs.getString("username"),
-                    rs.getString("email"),
-                    rs.getString("password"),
-                    rs.getInt("role_id"),
-                    rs.getString("full_name"),
-                    rs.getString("status")
-                );
+    private final String JDBC_URL = "jdbc:mysql://localhost:3306/your_database_name"; // Replace with your database URL
+    private final String JDBC_USER = "your_username"; // Replace with your database username
+    private final String JDBC_PASSWORD = "your_password"; // Replace with your database password
+
+    public StudentDAO() {
+        try {
+            Class.forName("com.mysql.cj.jdbc.Driver"); // MySQL 8+ driver
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+            // Handle the exception properly (e.g., log it, throw a custom exception)
+        }
+    }
+
+    private Connection getConnection() throws SQLException {
+        return DriverManager.getConnection(JDBC_URL, JDBC_USER, JDBC_PASSWORD);
+    }
+
+    public List<Student> getAllStudents() {
+        List<Student> students = new ArrayList<>();
+        String sql = "SELECT student_id, user_id, admission_date, batch_id, guardian_name, address FROM students";
+
+        try (Connection connection = getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql);
+             ResultSet resultSet = preparedStatement.executeQuery()) {
+
+            while (resultSet.next()) {
+                Student student = new Student();
+                student.setStudentId(resultSet.getInt("student_id"));
+                student.setUserId(resultSet.getInt("user_id"));
+                student.setAdmissionDate(resultSet.getDate("admission_date"));
+                student.setBatchId(resultSet.getInt("batch_id"));
+                student.setGuardianName(resultSet.getString("guardian_name"));
+                student.setAddress(resultSet.getString("address"));
+                students.add(student);
             }
+
         } catch (SQLException e) {
             e.printStackTrace();
+            // Handle the exception properly
         }
-        return null;
+        return students;
     }
 
-    public boolean createUser(User user) throws ClassNotFoundException {
-        String sql = "INSERT INTO users (username, email, password, role_id, full_name, status) VALUES (?, ?, ?, ?, ?, ?)";
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, user.getUsername());
-            ps.setString(2, user.getEmail());
-            ps.setString(3, user.getPassword()); // hashed password
-            ps.setInt(4, user.getRoleId());
-            ps.setString(5, user.getFullName());
-            ps.setString(6, user.getStatus());
-            return ps.executeUpdate() > 0;
+    public Student getStudentById(int id) {
+        Student student = null;
+        String sql = "SELECT student_id, user_id, admission_date, batch_id, guardian_name, address FROM students WHERE student_id = ?";
+
+        try (Connection connection = getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+
+            preparedStatement.setInt(1, id);
+            ResultSet resultSet = preparedStatement.executeQuery();
+
+            if (resultSet.next()) {
+                student = new Student();
+                student.setStudentId(resultSet.getInt("student_id"));
+                student.setUserId(resultSet.getInt("user_id"));
+                student.setAdmissionDate(resultSet.getDate("admission_date"));
+                student.setBatchId(resultSet.getInt("batch_id"));
+                student.setGuardianName(resultSet.getString("guardian_name"));
+                student.setAddress(resultSet.getString("address"));
+            }
+
         } catch (SQLException e) {
             e.printStackTrace();
+            // Handle the exception properly
         }
-        return false;
+        return student;
     }
 
-    // Additional methods: updateUser, deleteUser, validateUser etc. can be added as needed
-}
+    public void addStudent(Student student) {
+        String sql = "INSERT INTO students (user_id, admission_date, batch_id, guardian_name, address) VALUES (?, ?, ?, ?, ?)";
+
+        try (Connection connection = getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+
+            preparedStatement.setInt(1, student.getUserId());
+            preparedStatement.setDate(2, new java.sql.Date(student.getAdmissionDate().getTime()));
+            preparedStatement.setInt(3, student.getBatchId());
+            preparedStatement.setString(4, student.getGuardianName());
+            preparedStatement.setString(5, student.getAddress());
+            preparedStatement.executeUpdate();
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+            // Handle the exception properly
+        }
+    }
+
+    public void updateStudent(Student student) {
+        String sql = "UPDATE students SET user_id = ?, admission_date = ?, batch_id = ?, guardian_name = ?, address = ? WHERE student_id = ?";
+
+        try (Connection connection = getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+
+            preparedStatement.setInt(1, student.getUserId());
+            preparedStatement.setDate(2, new java.sql.Date(student.getAdmissionDate().getTime()));
+            preparedStatement.setInt(3, student.getBatchId());
+            preparedStatement.setString(4, student.getGuardianName());
+            preparedStatement.setString(5, student.getAddress());
+            preparedStatement.setInt(6, student.getStudentId());
+            preparedStatement.executeUpdate();
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+            // Handle the exception properly
+        }
+    }
+
+    public void deleteStudent(int id) {
+        String sql = "DELETE FROM students WHERE student_id = ?";
+
+        try (Connection connection = getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement(sql)) {
+
+            preparedStatement.setInt(1, id);
+            preparedStatement.executeUpdate();
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+            // Handle the exception properly
+        }
