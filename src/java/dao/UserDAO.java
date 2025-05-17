@@ -1,51 +1,38 @@
-package dao;
+import java.io.IOException;
+import java.util.List;
 
-import model.User;
-import controller.DBConnection;
+import javax.servlet.ServletException;
+import javax.servlet.annotation.WebServlet;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 
-import java.sql.*;
+@WebServlet("/notifications")
+public class NotificationServlet extends HttpServlet {
+    private static final long serialVersionUID = 1L;
+    private NotificationDAO notificationDAO;
 
-public class UserDAO {
-
-    public User getUserByEmail(String email) throws ClassNotFoundException {
-        String sql = "SELECT * FROM users WHERE email = ?";
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, email);
-            ResultSet rs = ps.executeQuery();
-            if (rs.next()) {
-                return new User(
-                    rs.getInt("user_id"),
-                    rs.getString("username"),
-                    rs.getString("email"),
-                    rs.getString("password"),
-                    rs.getInt("role_id"),
-                    rs.getString("full_name"),
-                    rs.getString("status")
-                );
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-        return null;
+    @Override
+    public void init() throws ServletException {
+        notificationDAO = new NotificationDAO();
     }
 
-    public boolean createUser(User user) throws ClassNotFoundException {
-        String sql = "INSERT INTO users (username, email, password, role_id, full_name, status) VALUES (?, ?, ?, ?, ?, ?)";
-        try (Connection conn = DBConnection.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, user.getUsername());
-            ps.setString(2, user.getEmail());
-            ps.setString(3, user.getPassword()); // hashed password
-            ps.setInt(4, user.getRoleId());
-            ps.setString(5, user.getFullName());
-            ps.setString(6, user.getStatus());
-            return ps.executeUpdate() > 0;
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-        return false;
+    protected void doGet(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        List<Notification> notifications = notificationDAO.getAllNotifications();
+        request.setAttribute("notificationList", notifications);
+        request.getRequestDispatcher("notification_list.jsp").forward(request, response);
     }
 
-    // Additional methods: updateUser, deleteUser, validateUser etc. can be added as needed
+    protected void doPost(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        String title = request.getParameter("title");
+        String message = request.getParameter("message");
+        String targetRole = request.getParameter("targetRole");
+
+        Notification newNotification = new Notification(title, message, targetRole);
+        notificationDAO.addNotification(newNotification);
+
+        response.sendRedirect("notifications"); // Redirect back to the notification list
+    }
 }
