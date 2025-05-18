@@ -1,0 +1,12 @@
+<component name="libraryTable">
+  <library name="jar files">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/jar files/gson-2.10.1.jar!/" />
+      <root url="jar://$PROJECT_DIR$/jar files/jakarta-jstl-1.1.2.jar!/" />
+      <root url="jar://$PROJECT_DIR$/jar files/jstl-1.2.jar!/" />
+      <root url="jar://$PROJECT_DIR$/jar files/mysql-connector-j-9.2.0.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>

@@ -1,131 +1,134 @@
-package servlet;
+package controller;
 
-import dao.StudentDAO;
-import model.Student;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.annotation.WebServlet;
-import jakarta.servlet.http.HttpServlet;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
+import dao.RoleDAO;
+import dao.UserDAO;
+import model.Role;
+import model.User;
+
+import javax.servlet.ServletException;
+import javax.servlet.annotation.WebServlet;
+import javax.servlet.http.*;
 import java.io.IOException;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
-@WebServlet("/")
-public class StudentServlet extends HttpServlet {
-    private static final long serialVersionUID = 1L;
-    private StudentDAO studentDAO;
+@WebServlet("/user")
+public class UserServlet extends HttpServlet {
+
+    private UserDAO userDAO;
+    private RoleDAO roleDAO;
 
     @Override
-    public void init() throws ServletException {
-        studentDAO = new StudentDAO();
+    public void init() {
+        userDAO = new UserDAO();
+        roleDAO = new RoleDAO();
     }
 
-    protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-        doGet(request, response);
-    }
+    @Override
+    protected void doGet(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
 
-    protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-        String action = request.getServletPath();
+        String action = request.getParameter("action");
 
-        try {
-            switch (action) {
-                case "/new":
+        if (action == null) action = "list";
+
+        switch (action) {
+            case "new" -> {
+                try {
                     showNewForm(request, response);
-                    break;
-                case "/insert":
-                    insertStudent(request, response);
-                    break;
-                case "/delete":
-                    deleteStudent(request, response);
-                    break;
-                case "/edit":
-                    showEditForm(request, response);
-                    break;
-                case "/update":
-                    updateStudent(request, response);
-                    break;
-                case "/profile":
-                    showProfile(request, response);
-                    break;
-                default:
-                    listStudents(request, response);
-                    break;
+                } catch (ClassNotFoundException ex) {
+                    Logger.getLogger(UserServlet.class.getName()).log(Level.SEVERE, null, ex);
+                }
             }
-        } catch (SQLException ex) {
-            throw new ServletException(ex);
+
+            case "edit" -> {
+                try {
+                    showEditForm(request, response);
+                } catch (ClassNotFoundException ex) {
+                    Logger.getLogger(UserServlet.class.getName()).log(Level.SEVERE, null, ex);
+                }
+            }
+
+            case "delete" -> {
+                try {
+                    deleteUser(request, response);
+                } catch (ClassNotFoundException ex) {
+                    Logger.getLogger(UserServlet.class.getName()).log(Level.SEVERE, null, ex);
+                }
+            }
+
+            default -> {
+                try {
+                    listUsers(request, response);
+                } catch (ClassNotFoundException ex) {
+                    Logger.getLogger(UserServlet.class.getName()).log(Level.SEVERE, null, ex);
+                }
+            }
+
         }
     }
 
-    private void listStudents(HttpServletRequest request, HttpServletResponse response)
-            throws SQLException, IOException, ServletException {
-        List<Student> listStudent = studentDAO.getAllStudents();
-        request.setAttribute("listStudent", listStudent);
-        request.getRequestDispatcher("student_list.jsp").forward(request, response);
+    protected void doPost(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+
+        int userId = request.getParameter("user_id") != null ? Integer.parseInt(request.getParameter("user_id")) : 0;
+        int roleId = Integer.parseInt(request.getParameter("role_id"));
+        String username = request.getParameter("username");
+        String email = request.getParameter("email");
+        String password = request.getParameter("password");
+        String fullName = request.getParameter("full_name");
+        String status = request.getParameter("status");
+
+        User user = new User(userId, roleId, username, email, password, fullName, status);
+
+        if (userId == 0) {
+            try {
+                userDAO.createUser(user);
+            } catch (ClassNotFoundException ex) {
+                Logger.getLogger(UserServlet.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        } else {
+            try {
+                userDAO.updateUser(user);
+            } catch (ClassNotFoundException ex) {
+                Logger.getLogger(UserServlet.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
+
+        response.sendRedirect("user");
+    }
+
+    private void listUsers(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException, ClassNotFoundException {
+        List<User> users = userDAO.getAllUsers();
+        request.setAttribute("userList", users);
+        request.getRequestDispatcher("user_list.jsp").forward(request, response);
     }
 
     private void showNewForm(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
-        request.getRequestDispatcher("student_form.jsp").forward(request, response);
-    }
-
-    private void insertStudent(HttpServletRequest request, HttpServletResponse response)
-            throws SQLException, IOException, ServletException {
-        int userId = Integer.parseInt(request.getParameter("userId"));
-        Date admissionDate = parseDate(request.getParameter("admissionDate"));
-        int batchId = Integer.parseInt(request.getParameter("batchId"));
-        String guardianName = request.getParameter("guardianName");
-        String address = request.getParameter("address");
-
-        Student newStudent = new Student(0, userId, admissionDate, batchId, guardianName, address);
-        studentDAO.addStudent(newStudent);
-        response.sendRedirect("list"); // Redirect to the list page
+            throws ServletException, IOException, ClassNotFoundException {
+        List<Role> roles = roleDAO.getAllRoles();
+        request.setAttribute("roles", roles);
+        request.getRequestDispatcher("user_form.jsp").forward(request, response);
     }
 
     private void showEditForm(HttpServletRequest request, HttpServletResponse response)
-            throws SQLException, ServletException, IOException {
-        int id = Integer.parseInt(request.getParameter("id"));
-        Student existingStudent = studentDAO.getStudentById(id);
-        request.setAttribute("student", existingStudent);
-        request.getRequestDispatcher("student_form.jsp").forward(request, response);
+            throws ServletException, IOException, ClassNotFoundException {
+        int userId = Integer.parseInt(request.getParameter("id"));
+        User existingUser = userDAO.getUserByEmail(userDAO.getAllUsers().stream()
+                .filter(u -> u.getUserId() == userId)
+                .findFirst().get().getEmail());
+        List<Role> roles = roleDAO.getAllRoles();
+        request.setAttribute("user", existingUser);
+        request.setAttribute("roles", roles);
+        request.getRequestDispatcher("user_form.jsp").forward(request, response);
     }
 
-    private void updateStudent(HttpServletRequest request, HttpServletResponse response)
-            throws SQLException, IOException, ServletException {
-        int studentId = Integer.parseInt(request.getParameter("studentId"));
-        int userId = Integer.parseInt(request.getParameter("userId"));
-        Date admissionDate = parseDate(request.getParameter("admissionDate"));
-        int batchId = Integer.parseInt(request.getParameter("batchId"));
-        String guardianName = request.getParameter("guardianName");
-        String address = request.getParameter("address");
-
-        Student student = new Student(studentId, userId, admissionDate, batchId, guardianName, address);
-        studentDAO.updateStudent(student);
-        response.sendRedirect("list"); // Redirect to the list page
+    private void deleteUser(HttpServletRequest request, HttpServletResponse response)
+            throws IOException, ClassNotFoundException {
+        int userId = Integer.parseInt(request.getParameter("id"));
+        userDAO.deleteUser(userId);
+        response.sendRedirect("user");
     }
-
-    private void deleteStudent(HttpServletRequest request, HttpServletResponse response)
-            throws SQLException, IOException, ServletException {
-        int id = Integer.parseInt(request.getParameter("id"));
-        studentDAO.deleteStudent(id);
-        response.sendRedirect("list"); // Redirect to the list page
-    }
-
-    private void showProfile(HttpServletRequest request, HttpServletResponse response)
-            throws SQLException, ServletException, IOException {
-        int id = Integer.parseInt(request.getParameter("id"));
-        Student student = studentDAO.getStudentById(id);
-        request.setAttribute("student", student);
-        request.getRequestDispatcher("student_profile.jsp").forward(request, response);
-    }
-
-    private Date parseDate(String dateString) {
-        try {
-            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd"); // Adjust format as needed
-            return sdf.parse(dateString);
-        } catch (ParseException e) {
-            e.printStackTrace();
-            return null; // Handle parsing error appropriately
-        }
+}

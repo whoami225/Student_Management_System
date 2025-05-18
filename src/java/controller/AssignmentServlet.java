@@ -1,48 +1,69 @@
 package controller;
 
-import java.io.*;
-import java.nio.file.*;
-import java.sql.*;
-import java.time.LocalDate;
-import jakarta.servlet.*;
-import jakarta.servlet.annotation.MultipartConfig;
-import jakarta.servlet.http.*;
+import dao.AssignmentDAO;
+import model.Assignment;
 
-@MultipartConfig
+import javax.servlet.ServletException;
+import javax.servlet.annotation.MultipartConfig;
+import javax.servlet.annotation.WebServlet;
+import javax.servlet.http.*;
+import java.io.*;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.List;
+
+@WebServlet("/assignment")
+@MultipartConfig(fileSizeThreshold = 1024 * 1024, maxFileSize = 1024 * 1024 * 10)
 public class AssignmentServlet extends HttpServlet {
 
-    protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-        int subjectId = Integer.parseInt(request.getParameter("subject_id"));
-        String title = request.getParameter("title");
-        String description = request.getParameter("description");
-        String dueDate = request.getParameter("due_date");
+    private AssignmentDAO assignmentDAO;
 
-        Part filePart = request.getPart("file");
-        String fileName = Paths.get(filePart.getSubmittedFileName()).getFileName().toString();
-        String uploadPath = getServletContext().getRealPath("/") + "uploads";
+    @Override
+    public void init() throws ServletException {
+        assignmentDAO = new AssignmentDAO();
+    }
 
-        Files.createDirectories(Paths.get(uploadPath));
-        String fullPath = uploadPath + File.separator + fileName;
-
-        try (InputStream fileContent = filePart.getInputStream()) {
-            Files.copy(fileContent, Paths.get(fullPath), StandardCopyOption.REPLACE_EXISTING);
-        }
-
-        Assignment assignment = new Assignment();
-        assignment.setSubjectId(subjectId);
-        assignment.setTitle(title);
-        assignment.setDescription(description);
-        assignment.setUploadDate(LocalDate.now().toString());
-        assignment.setDueDate(dueDate);
-        assignment.setFilePath("uploads/" + fileName);
-
-        try (Connection conn = DBConnection.getConnection()) {
-            AssignmentDAO dao = new AssignmentDAO(conn);
-            dao.addAssignment(assignment);
+    @Override
+    protected void doGet(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        try {
+            List<Assignment> assignments = assignmentDAO.getAllAssignments();
+            request.setAttribute("assignmentList", assignments);
+            request.getRequestDispatcher("assignment_list.jsp").forward(request, response);
         } catch (Exception e) {
-            e.printStackTrace();
+            request.setAttribute("error", "Failed to load assignments: " + e.getMessage());
+            request.getRequestDispatcher("/error.jsp").forward(request, response);
         }
+    }
 
-        response.sendRedirect("assignment_list.jsp");
+    @Override
+    protected void doPost(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        try {
+            String title = request.getParameter("title");
+            String description = request.getParameter("description");
+            int subjectId = Integer.parseInt(request.getParameter("subject_id"));
+            Date uploadDate = new Date();
+            Date dueDate = new SimpleDateFormat("yyyy-MM-dd").parse(request.getParameter("due_date"));
+
+            Part filePart = request.getPart("file");
+            String fileName = new File(filePart.getSubmittedFileName()).getName();
+
+            String uploadPath = getServletContext().getRealPath("") + File.separator + "uploads";
+            File uploadDir = new File(uploadPath);
+            if (!uploadDir.exists()) uploadDir.mkdir();
+
+            String filePath = uploadPath + File.separator + fileName;
+            filePart.write(filePath);
+
+            Assignment assignment = new Assignment(0, subjectId, title, description, uploadDate, dueDate, "uploads/" + fileName);
+            assignmentDAO.addAssignment(assignment);
+
+            response.sendRedirect(request.getContextPath() + "/assignment");
+
+        } catch (Exception e) {
+            request.setAttribute("error", "Failed to upload assignment: " + e.getMessage());
+            request.getRequestDispatcher("/error.jsp").forward(request, response);
+        }
     }
 }
