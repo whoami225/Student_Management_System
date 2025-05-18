@@ -7,10 +7,8 @@ public class Grade {
     private double marks;
     private String grade;
 
-    // Default constructor
     public Grade() {}
 
-    // Parameterized constructor
     public Grade(int gradeId, int studentId, int subjectId, double marks, String grade) {
         this.gradeId = gradeId;
         this.studentId = studentId;
@@ -19,7 +17,6 @@ public class Grade {
         this.grade = grade;
     }
 
-    // Getters and Setters
     public int getGradeId() { return gradeId; }
     public void setGradeId(int gradeId) { this.gradeId = gradeId; }
 
@@ -34,6 +31,14 @@ public class Grade {
 
     public String getGrade() { return grade; }
     public void setGrade(String grade) { this.grade = grade; }
+
+    public void assignGradeFromMarks() {
+        if (marks >= 90) grade = "A";
+        else if (marks >= 75) grade = "B";
+        else if (marks >= 60) grade = "C";
+        else if (marks >= 40) grade = "D";
+        else grade = "F";
+    }
 
     @Override
     public String toString() {
