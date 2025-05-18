@@ -1,47 +1,51 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package dao;
 
-import java.sql.*;
-import java.util.*;
 import model.Attendance;
+import controller.DBConnection;
+
+import java.sql.*;
+import java.util.ArrayList;
+import java.util.List;
 
 public class AttendanceDAO {
-    private Connection conn;
 
-    public AttendanceDAO(Connection conn) {
-        this.conn = conn;
-    }
+    // Inserts attendance record into DB
+        public boolean markAttendance(Attendance attendance) throws ClassNotFoundException {
+         String sql = "INSERT INTO attendance (student_id, date, status) VALUES (?, ?, ?)";
+         try (Connection conn = DBConnection.getConnection();
+              PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, attendance.getStudentId());
+            ps.setDate(2, new java.sql.Date(attendance.getDate().getTime()));
+            ps.setString(3, attendance.getStatus());
 
-    public void markAttendance(Attendance a) throws SQLException {
-        String sql = "INSERT INTO attendance (student_id, subject_id, date, status) VALUES (?, ?, ?, ?)";
-        PreparedStatement stmt = conn.prepareStatement(sql);
-        stmt.setInt(1, a.getStudentId());
-        stmt.setInt(2, a.getSubjectId());
-        stmt.setString(3, a.getDate());
-        stmt.setBoolean(4, a.isStatus());
-        stmt.executeUpdate();
-    }
+             return ps.executeUpdate() > 0;
+         } catch (SQLException e) {
+             e.printStackTrace();
+         }
+         return false;
+     }
 
-    public List<Attendance> getAttendanceByStudent(int studentId) throws SQLException {
+    // Retrieves list of attendance records by student ID
+    public List<Attendance> getAttendanceByStudent(int studentId) throws ClassNotFoundException {
         List<Attendance> list = new ArrayList<>();
         String sql = "SELECT * FROM attendance WHERE student_id = ?";
-        PreparedStatement stmt = conn.prepareStatement(sql);
-        stmt.setInt(1, studentId);
-        ResultSet rs = stmt.executeQuery();
-
-        while (rs.next()) {
-            Attendance a = new Attendance();
-            a.setAttendanceId(rs.getInt("attendance_id"));
-            a.setStudentId(rs.getInt("student_id"));
-            a.setSubjectId(rs.getInt("subject_id"));
-            a.setDate(rs.getString("date"));
-            a.setStatus(rs.getBoolean("status"));
-            list.add(a);
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, studentId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    Attendance attendance = new Attendance(
+                            rs.getInt("attendance_id"),
+                            rs.getInt("student_id"),
+                            rs.getDate("date"),
+                            rs.getString("status")
+                    );
+                    list.add(attendance);
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
         }
-
         return list;
     }
 }
