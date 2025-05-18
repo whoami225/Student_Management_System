@@ -1,87 +1,72 @@
 package dao;
 
-import java.sql.*;
-import java.util.*;
 import model.Grade;
+import controller.DBConnection;
+
+import java.sql.*;
+import java.util.ArrayList;
+import java.util.List;
+
 public class GradeDAO {
-    private Connection conn;
 
-    public GradeDAO(Connection conn) {
-        this.conn = conn;
-    }
-
-    public void addGrade(Grade grade) throws SQLException {
-        String sql = "INSERT INTO grades (student_id, subject_id, marks, grade) VALUES (?, ?, ?, ?)";
-        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setInt(1, grade.getStudentId());
-            stmt.setInt(2, grade.getSubjectId());
-            stmt.setDouble(3, grade.getMarks());
-            stmt.setString(4, grade.getGrade());
-            stmt.executeUpdate();
+    public boolean addGrade(Grade grade) throws ClassNotFoundException {
+        String sql = "INSERT INTO grades (student_id, exam_id, marks_obtained) VALUES (?, ?, ?)";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, grade.getStudentId());
+            ps.setInt(2, grade.getExamId());
+            ps.setInt(3, grade.getMarksObtained());
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
         }
+        return false;
     }
 
-    public void updateGrade(Grade grade) throws SQLException {
-        String sql = "UPDATE grades SET student_id = ?, subject_id = ?, marks = ?, grade = ? WHERE grade_id = ?";
-        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setInt(1, grade.getStudentId());
-            stmt.setInt(2, grade.getSubjectId());
-            stmt.setDouble(3, grade.getMarks());
-            stmt.setString(4, grade.getGrade());
-            stmt.setInt(5, grade.getGradeId());
-            stmt.executeUpdate();
+    public List<Grade> getGradesByStudent(int studentId) throws ClassNotFoundException {
+    List<Grade> grades = new ArrayList<>();
+    String sql = "SELECT g.*, e.exam_date, e.total_marks, s.subject_name " +
+                 "FROM grades g " +
+                 "JOIN exams e ON g.exam_id = e.exam_id " +
+                 "JOIN subjects s ON e.subject_id = s.subject_id " +
+                 "WHERE g.student_id = ?";
+    try (Connection conn = DBConnection.getConnection();
+         PreparedStatement ps = conn.prepareStatement(sql)) {
+        ps.setInt(1, studentId);
+        ResultSet rs = ps.executeQuery();
+        while (rs.next()) {
+            Grade grade = new Grade(
+                rs.getInt("grade_id"),
+                rs.getInt("student_id"),
+                rs.getInt("exam_id"),
+                rs.getInt("marks_obtained")
+            );
+            grade.setSubjectName(rs.getString("subject_name"));
+            grade.setExamDate(rs.getDate("exam_date"));
+            grade.setTotalMarks(rs.getInt("total_marks"));
+
+            // Calculate percentage and grade letter
+            int marks = rs.getInt("marks_obtained");
+            int total = rs.getInt("total_marks");
+            double percentage = total > 0 ? (marks * 100.0) / total : 0.0;
+            grade.setPercentage(percentage);
+            grade.setGradeLetter(getGradeLetter(percentage));
+
+            grades.add(grade);
         }
+    } catch (SQLException e) {
+        e.printStackTrace();
     }
+    return grades;
+}
 
-    public void deleteGrade(int gradeId) throws SQLException {
-        String sql = "DELETE FROM grades WHERE grade_id = ?";
-        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setInt(1, gradeId);
-            stmt.executeUpdate();
-        }
-    }
+// Helper method for grade letter
+private String getGradeLetter(double percentage) {
+    if (percentage >= 90) return "A";
+    if (percentage >= 80) return "B";
+    if (percentage >= 70) return "C";
+    if (percentage >= 60) return "D";
+    return "F";
+}
 
-    public List<Grade> getGradesByStudentId(int studentId) throws SQLException {
-        String sql = "SELECT * FROM grades WHERE student_id = ?";
-        return getGradesByQuery(sql, studentId);
-    }
-
-    public List<Grade> getGradesBySubjectId(int subjectId) throws SQLException {
-        String sql = "SELECT * FROM grades WHERE subject_id = ?";
-        return getGradesByQuery(sql, subjectId);
-    }
-
-    public List<Grade> getAllGrades() throws SQLException {
-        String sql = "SELECT * FROM grades";
-        List<Grade> grades = new ArrayList<>();
-        try (PreparedStatement stmt = conn.prepareStatement(sql);
-             ResultSet rs = stmt.executeQuery()) {
-            while (rs.next()) {
-                grades.add(extractGradeFromResultSet(rs));
-            }
-        }
-        return grades;
-    }
-
-    private List<Grade> getGradesByQuery(String sql, int param) throws SQLException {
-        List<Grade> grades = new ArrayList<>();
-        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setInt(1, param);
-            ResultSet rs = stmt.executeQuery();
-            while (rs.next()) {
-                grades.add(extractGradeFromResultSet(rs));
-            }
-        }
-        return grades;
-    }
-
-    private Grade extractGradeFromResultSet(ResultSet rs) throws SQLException {
-        Grade grade = new Grade();
-        grade.setGradeId(rs.getInt("grade_id"));
-        grade.setStudentId(rs.getInt("student_id"));
-        grade.setSubjectId(rs.getInt("subject_id"));
-        grade.setMarks(rs.getDouble("marks"));
-        grade.setGrade(rs.getString("grade"));
-        return grade;
-    }
 }
