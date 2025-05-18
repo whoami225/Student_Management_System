@@ -1,89 +1,81 @@
 package dao;
 
+import model.Assignment;
+import controller.DBConnection;
+
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
-import model.Assignment;
 
 public class AssignmentDAO {
-    private Connection connection;
-    
-    public AssignmentDAO(Connection connection) {
-        this.connection = connection;
-    }
-    
-    // Add a new assignment
+
     public boolean addAssignment(Assignment assignment) {
-        String sql = "INSERT INTO assignments (subject_id, title, description, upload_date, due_date, file_path) " +
-                     "VALUES (?, ?, ?, ?, ?, ?)";
-        
-        try (PreparedStatement statement = connection.prepareStatement(sql)) {
-            statement.setInt(1, assignment.getSubjectId());
-            statement.setString(2, assignment.getTitle());
-            statement.setString(3, assignment.getDescription());
-            statement.setTimestamp(4, new Timestamp(assignment.getUploadDate().getTime()));
-            statement.setTimestamp(5, new Timestamp(assignment.getDueDate().getTime()));
-            statement.setString(6, assignment.getFilePath());
-            
-            return statement.executeUpdate() > 0;
-        } catch (SQLException e) {
+        String sql = "INSERT INTO assignments (subject_id, title, description, upload_date, due_date, file_path) VALUES (?, ?, ?, ?, ?, ?)";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setInt(1, assignment.getSubjectId());
+            ps.setString(2, assignment.getTitle());
+            ps.setString(3, assignment.getDescription());
+            ps.setDate(4, new java.sql.Date(assignment.getUploadDate().getTime()));
+            ps.setDate(5, new java.sql.Date(assignment.getDueDate().getTime()));
+            ps.setString(6, assignment.getFilePath());
+
+            return ps.executeUpdate() > 0;
+
+        } catch (SQLException | ClassNotFoundException e) {
             e.printStackTrace();
             return false;
         }
     }
-    
-    // Get all assignments
-    public List<Assignment> getAllAssignments() {
-        List<Assignment> assignments = new ArrayList<>();
-        String sql = "SELECT * FROM assignments ORDER BY due_date ASC";
-        
-        try (Statement statement = connection.createStatement();
-             ResultSet resultSet = statement.executeQuery(sql)) {
-            
-            while (resultSet.next()) {
-                Assignment assignment = new Assignment();
-                assignment.setAssignmentId(resultSet.getInt("assignment_id"));
-                assignment.setSubjectId(resultSet.getInt("subject_id"));
-                assignment.setTitle(resultSet.getString("title"));
-                assignment.setDescription(resultSet.getString("description"));
-                assignment.setUploadDate(resultSet.getTimestamp("upload_date"));
-                assignment.setDueDate(resultSet.getTimestamp("due_date"));
-                assignment.setFilePath(resultSet.getString("file_path"));
-                
-                assignments.add(assignment);
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-        
-        return assignments;
-    }
-    
-    // Get assignments by subject (optional)
+
     public List<Assignment> getAssignmentsBySubject(int subjectId) {
-        List<Assignment> assignments = new ArrayList<>();
-        String sql = "SELECT * FROM assignments WHERE subject_id = ? ORDER BY due_date ASC";
-        
-        try (PreparedStatement statement = connection.prepareStatement(sql)) {
-            statement.setInt(1, subjectId);
-            ResultSet resultSet = statement.executeQuery();
-            
-            while (resultSet.next()) {
-                Assignment assignment = new Assignment();
-                assignment.setAssignmentId(resultSet.getInt("assignment_id"));
-                assignment.setSubjectId(resultSet.getInt("subject_id"));
-                assignment.setTitle(resultSet.getString("title"));
-                assignment.setDescription(resultSet.getString("description"));
-                assignment.setUploadDate(resultSet.getTimestamp("upload_date"));
-                assignment.setDueDate(resultSet.getTimestamp("due_date"));
-                assignment.setFilePath(resultSet.getString("file_path"));
-                
-                assignments.add(assignment);
+        List<Assignment> list = new ArrayList<>();
+        String sql = "SELECT * FROM assignments WHERE subject_id=?";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setInt(1, subjectId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    list.add(new Assignment(
+                        rs.getInt("assignment_id"),
+                        rs.getInt("subject_id"),
+                        rs.getString("title"),
+                        rs.getString("description"),
+                        rs.getDate("upload_date"),
+                        rs.getDate("due_date"),
+                        rs.getString("file_path")
+                    ));
+                }
             }
-        } catch (SQLException e) {
+        } catch (SQLException | ClassNotFoundException e) {
             e.printStackTrace();
         }
-        
-        return assignments;
+        return list;
+    }
+
+    public List<Assignment> getAllAssignments() {
+        List<Assignment> list = new ArrayList<>();
+        String sql = "SELECT * FROM assignments";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+
+            while (rs.next()) {
+                list.add(new Assignment(
+                    rs.getInt("assignment_id"),
+                    rs.getInt("subject_id"),
+                    rs.getString("title"),
+                    rs.getString("description"),
+                    rs.getDate("upload_date"),
+                    rs.getDate("due_date"),
+                    rs.getString("file_path")
+                ));
+            }
+        } catch (SQLException | ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+        return list;
     }
 }
