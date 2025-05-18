@@ -1,49 +1,46 @@
 package model;
 
 import java.util.Date;
-import javax.lang.model.SourceVersion;
 
-import java.sql.*;
-import java.util.*;
+public class Assignment {
+    private int assignmentId;
+    private int subjectId;
+    private String title;
+    private String description;
+    private Date uploadDate;
+    private Date dueDate;
+    private String filePath;
 
-public class AssignmentDAO {
-    private Connection conn;
+    public Assignment() {}
 
-    public AssignmentDAO(Connection conn) {
-        this.conn = conn;
+    public Assignment(int assignmentId, int subjectId, String title, String description, Date uploadDate, Date dueDate, String filePath) {
+        this.assignmentId = assignmentId;
+        this.subjectId = subjectId;
+        this.title = title;
+        this.description = description;
+        this.uploadDate = uploadDate;
+        this.dueDate = dueDate;
+        this.filePath = filePath;
     }
 
-    public void addAssignment(Assignment a) throws SQLException {
-        String sql = "INSERT INTO assignments (subject_id, title, description, upload_date, due_date, file_path) VALUES (?, ?, ?, ?, ?, ?)";
-        PreparedStatement stmt = conn.prepareStatement(sql);
-        stmt.setInt(1, a.getSubjectId());
-        stmt.setString(2, a.getTitle());
-        stmt.setString(3, a.getDescription());
-        stmt.setString(4, a.getUploadDate());
-        stmt.setString(5, a.getDueDate());
-        stmt.setString(6, a.getFilePath());
-        stmt.executeUpdate();
-    }
+    public int getAssignmentId() { return assignmentId; }
+    public void setAssignmentId(int assignmentId) { this.assignmentId = assignmentId; }
 
-    public List<Assignment> getAllAssignments() throws SQLException {
-        List<Assignment> list = new ArrayList<>();
-        String sql = "SELECT * FROM assignments ORDER BY due_date";
-        Statement stmt = conn.createStatement();
-        ResultSet rs = stmt.executeQuery(sql);
+    public int getSubjectId() { return subjectId; }
+    public void setSubjectId(int subjectId) { this.subjectId = subjectId; }
 
-        while (rs.next()) {
-            Assignment a = new Assignment();
-            a.setAssignmentId(rs.getInt("assignment_id"));
-            a.setSubjectId(rs.getInt("subject_id"));
-            a.setTitle(rs.getString("title"));
-            a.setDescription(rs.getString("description"));
-            a.setUploadDate(rs.getString("upload_date"));
-            a.setDueDate(rs.getString("due_date"));
-            a.setFilePath(rs.getString("file_path"));
-            list.add(a);
-        }
+    public String getTitle() { return title; }
+    public void setTitle(String title) { this.title = title; }
 
-        return list;
-    }
+    public String getDescription() { return description; }
+    public void setDescription(String description) { this.description = description; }
+
+    public Date getUploadDate() { return uploadDate; }
+    public void setUploadDate(Date uploadDate) { this.uploadDate = uploadDate; }
+
+    public Date getDueDate() { return dueDate; }
+    public void setDueDate(Date dueDate) { this.dueDate = dueDate; }
+
+    public String getFilePath() { return filePath; }
+    public void setFilePath(String filePath) { this.filePath = filePath; }
 }
-
