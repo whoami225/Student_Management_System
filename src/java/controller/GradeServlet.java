@@ -14,13 +14,13 @@ public class GradeServlet extends HttpServlet {
 
     public void init() {
         try {
-            Class.forName("com.mysql.cj.jdbc.Driver"); // Ensure JDBC driver is loaded
+            Class.forName("com.mysql.cj.jdbc.Driver");
             Connection conn = DriverManager.getConnection(
                 "jdbc:mysql://localhost:3306/yourdb", "user", "pass"
             );
             gradeDAO = new GradeDAO(conn);
         } catch (Exception e) {
-            throw new RuntimeException("Database connection initialization failed", e);
+            throw new RuntimeException("Database connection failed", e);
         }
     }
 
@@ -33,18 +33,17 @@ public class GradeServlet extends HttpServlet {
             int studentId = Integer.parseInt(request.getParameter("studentId"));
             int subjectId = Integer.parseInt(request.getParameter("subjectId"));
             double marks = Double.parseDouble(request.getParameter("marks"));
-            String grade = request.getParameter("grade");
 
-            Grade g = new Grade();
-            g.setStudentId(studentId);
-            g.setSubjectId(subjectId);
-            g.setMarks(marks);
-            g.setGrade(grade);
+            Grade grade = new Grade();
+            grade.setStudentId(studentId);
+            grade.setSubjectId(subjectId);
+            grade.setMarks(marks);
+            grade.assignGradeFromMarks();
 
-            gradeDAO.addGrade(g);
-            response.sendRedirect("GradeServlet"); // Refresh list
+            gradeDAO.addGrade(grade);
+            response.sendRedirect("GradeServlet");
         } catch (Exception e) {
-            throw new ServletException("Error processing grade submission", e);
+            throw new ServletException("Error submitting grade", e);
         }
     }
 
@@ -53,7 +52,6 @@ public class GradeServlet extends HttpServlet {
             throws ServletException, IOException {
         String student = request.getParameter("studentId");
         String subject = request.getParameter("subjectId");
-
         List<Grade> grades;
 
         try {
@@ -62,14 +60,14 @@ public class GradeServlet extends HttpServlet {
             } else if (subject != null && !subject.trim().isEmpty()) {
                 grades = gradeDAO.getGradesBySubjectId(Integer.parseInt(subject));
             } else {
-                grades = gradeDAO.getAllGrades(); // Show all if no filter
+                grades = gradeDAO.getAllGrades();
             }
 
             request.setAttribute("grades", grades);
             RequestDispatcher dispatcher = request.getRequestDispatcher("grade_list.jsp");
             dispatcher.forward(request, response);
         } catch (Exception e) {
-            throw new ServletException("Error retrieving grade list", e);
+            throw new ServletException("Error fetching grade list", e);
         }
     }
 }
