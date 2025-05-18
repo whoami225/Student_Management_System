@@ -6,7 +6,7 @@ package controller;
 
 /**
  *
- * @author nneth
+ * @author V.I.Wijesinghe
  */
 public class MessageServlet {
     

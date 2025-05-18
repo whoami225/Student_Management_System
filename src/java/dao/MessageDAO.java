@@ -1,71 +1,136 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
-// src/main/java/com/example/dao/MessageDAO.java
-package com.example.dao;
+package dao;
 
-import com.example.model.Message;
+import model.Message;
+import controller.DBConnection;
+
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
 public class MessageDAO {
-    private String jdbcURL = "jdbc:mysql://localhost:3306/student_db";
-    private String jdbcUsername = "root";
-    private String jdbcPassword = "password";
 
-    protected Connection getConnection() {
-        Connection connection = null;
-        try {
-            Class.forName("com.mysql.cj.jdbc.Driver");
-            connection = DriverManager.getConnection(jdbcURL, jdbcUsername, jdbcPassword);
-        } catch (SQLException | ClassNotFoundException e) {
-            e.printStackTrace();
-        }
-        return connection;
-    }
-
-    public boolean sendMessage(Message message) {
-        String sql = "INSERT INTO messages (sender_id, receiver_id, subject, content) VALUES (?, ?, ?, ?)";
-        try (Connection conn = getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            
-            stmt.setInt(1, message.getSenderId());
-            stmt.setInt(2, message.getReceiverId());
-            stmt.setString(3, message.getSubject());
-            stmt.setString(4, message.getContent());
-            
-            return stmt.executeUpdate() > 0;
+    public boolean sendMessage(Message message) throws ClassNotFoundException {
+        String sql = "INSERT INTO messages (sender_id, receiver_id, message_text) VALUES (?, ?, ?)";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, message.getSenderId());
+            ps.setInt(2, message.getReceiverId());
+            ps.setString(3, message.getMessageText());
+            return ps.executeUpdate() > 0;
         } catch (SQLException e) {
             e.printStackTrace();
-            return false;
         }
+        return false;
     }
 
-    public List<Message> getMessagesByReceiver(int receiverId) {
+    public List<Message> getMessagesForUser(int userId) throws ClassNotFoundException {
         List<Message> messages = new ArrayList<>();
-        String sql = "SELECT * FROM messages WHERE receiver_id = ? ORDER BY timestamp DESC";
-        
-        try (Connection conn = getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            
-            stmt.setInt(1, receiverId);
-            ResultSet rs = stmt.executeQuery();
-            
+        String sql = "SELECT * FROM messages WHERE receiver_id = ? ORDER BY sent_at DESC";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, userId);
+            ResultSet rs = ps.executeQuery();
             while (rs.next()) {
-                Message message = new Message();
-                message.setMessageId(rs.getInt("message_id"));
-                message.setSenderId(rs.getInt("sender_id"));
-                message.setReceiverId(rs.getInt("receiver_id"));
-                message.setSubject(rs.getString("subject"));
-                message.setContent(rs.getString("content"));
-                message.setTimestamp(rs.getTimestamp("timestamp"));
-                messages.add(message);
+                Message msg = new Message(
+                    rs.getInt("message_id"),
+                    rs.getInt("sender_id"),
+                    rs.getInt("receiver_id"),
+                    rs.getString("message_text"),
+                    rs.getTimestamp("sent_at"),
+                    rs.getBoolean("is_read")
+                );
+                messages.add(msg);
             }
         } catch (SQLException e) {
             e.printStackTrace();
         }
         return messages;
     }
+    
+    public List<Message> getMessagesBetweenRoles(int userId, int senderRole, int receiverRole) throws ClassNotFoundException {
+    List<Message> messages = new ArrayList<>();
+    String sql = "SELECT m.* FROM messages m " +
+                 "JOIN users s ON m.sender_id = s.user_id " +
+                 "JOIN users r ON m.receiver_id = r.user_id " +
+                 "WHERE ((m.sender_id = ? AND r.role_id = ?) OR (m.receiver_id = ? AND s.role_id = ?)) " +
+                 "ORDER BY m.sent_at DESC";
+    try (Connection conn = DBConnection.getConnection();
+         PreparedStatement ps = conn.prepareStatement(sql)) {
+        ps.setInt(1, userId);
+        ps.setInt(2, receiverRole);
+        ps.setInt(3, userId);
+        ps.setInt(4, senderRole);
+        ResultSet rs = ps.executeQuery();
+        while (rs.next()) {
+            messages.add(new Message(
+                rs.getInt("message_id"),
+                rs.getInt("sender_id"),
+                rs.getInt("receiver_id"),
+                rs.getString("message_text"),
+                rs.getTimestamp("sent_at"),
+                rs.getBoolean("is_read")
+            ));
+        }
+    } catch (SQLException e) {
+        e.printStackTrace();
+    }
+    return messages;
+}
+public List<Message> getReceivedMessagesBySenderRoles(int receiverId, List<Integer> senderRoles) throws ClassNotFoundException {
+    List<Message> messages = new ArrayList<>();
+    // Compose a SQL query with IN clause for senderRoles
+    StringBuilder sql = new StringBuilder("SELECT m.* FROM messages m JOIN users u ON m.sender_id = u.user_id WHERE m.receiver_id = ? AND u.role_id IN (");
+    for (int i = 0; i < senderRoles.size(); i++) {
+        sql.append("?");
+        if (i < senderRoles.size() - 1) sql.append(",");
+    }
+    sql.append(") ORDER BY m.sent_at DESC");
+
+    try (Connection conn = DBConnection.getConnection();
+         PreparedStatement ps = conn.prepareStatement(sql.toString())) {
+        ps.setInt(1, receiverId);
+        for (int i = 0; i < senderRoles.size(); i++) {
+            ps.setInt(i + 2, senderRoles.get(i));
+        }
+        ResultSet rs = ps.executeQuery();
+        while (rs.next()) {
+            messages.add(new Message(
+                rs.getInt("message_id"),
+                rs.getInt("sender_id"),
+                rs.getInt("receiver_id"),
+                rs.getString("message_text"),
+                rs.getTimestamp("sent_at"),
+                rs.getBoolean("is_read")
+            ));
+        }
+    } catch (SQLException e) {
+        e.printStackTrace();
+    }
+    return messages;
+}
+public List<Message> getReceivedMessagesForUser(int userId) throws ClassNotFoundException {
+    List<Message> messages = new ArrayList<>();
+    String sql = "SELECT * FROM messages WHERE receiver_id = ? ORDER BY sent_at DESC";
+    try (Connection conn = DBConnection.getConnection();
+         PreparedStatement ps = conn.prepareStatement(sql)) {
+        ps.setInt(1, userId);
+        ResultSet rs = ps.executeQuery();
+        while (rs.next()) {
+            messages.add(new Message(
+                rs.getInt("message_id"),
+                rs.getInt("sender_id"),
+                rs.getInt("receiver_id"),
+                rs.getString("message_text"),
+                rs.getTimestamp("sent_at"),
+                rs.getBoolean("is_read")
+            ));
+        }
+    } catch (SQLException e) {
+        e.printStackTrace();
+    }
+    return messages;
+}
+
+
+    // Optional: add markAsRead, deleteMessage etc.
 }

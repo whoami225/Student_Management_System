@@ -1,33 +1,42 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
-// src/main/java/com/example/model/Message.java
-package com.example.model;
+package model;
 
-import java.sql.Timestamp;
+import java.util.Date;
 
 public class Message {
     private int messageId;
     private int senderId;
     private int receiverId;
-    private String subject;
-    private String content;
-    private Timestamp timestamp;
-    
+    private String messageText;
+    private Date sentAt;
+    private boolean isRead;
+
     public Message() {}
 
-    // Getters and Setters
+    public Message(int messageId, int senderId, int receiverId, String messageText, Date sentAt, boolean isRead) {
+        this.messageId = messageId;
+        this.senderId = senderId;
+        this.receiverId = receiverId;
+        this.messageText = messageText;
+        this.sentAt = sentAt;
+        this.isRead = isRead;
+    }
+
+    // Getters and setters
     public int getMessageId() { return messageId; }
     public void setMessageId(int messageId) { this.messageId = messageId; }
+
     public int getSenderId() { return senderId; }
     public void setSenderId(int senderId) { this.senderId = senderId; }
+
     public int getReceiverId() { return receiverId; }
     public void setReceiverId(int receiverId) { this.receiverId = receiverId; }
-    public String getSubject() { return subject; }
-    public void setSubject(String subject) { this.subject = subject; }
-    public String getContent() { return content; }
-    public void setContent(String content) { this.content = content; }
-    public Timestamp getTimestamp() { return timestamp; }
-    public void setTimestamp(Timestamp timestamp) { this.timestamp = timestamp; }
+
+    public String getMessageText() { return messageText; }
+    public void setMessageText(String messageText) { this.messageText = messageText; }
+
+    public Date getSentAt() { return sentAt; }
+    public void setSentAt(Date sentAt) { this.sentAt = sentAt; }
+
+    public boolean isRead() { return isRead; }
+    public void setRead(boolean isRead) { this.isRead = isRead; }
 }
