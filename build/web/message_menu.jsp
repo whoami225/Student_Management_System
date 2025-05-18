@@ -1,9 +1,3 @@
-<%-- 
-    Document   : message_menu
-    Created on : 18 May 2025, 14:28:48
-    Author     : nneth
---%>
-
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
 <html>
