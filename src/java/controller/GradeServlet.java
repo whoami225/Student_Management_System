@@ -1,73 +1,72 @@
 package controller;
 
+import dao.ExamDAO;
 import dao.GradeDAO;
+import dao.StudentDAO;
+import model.Exam;
 import model.Grade;
+import model.Student;
 
-import javax.servlet.*;
+import javax.servlet.ServletException;
+import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.*;
 import java.io.IOException;
-import java.sql.*;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
+@WebServlet("/grade")
 public class GradeServlet extends HttpServlet {
-    private GradeDAO gradeDAO;
 
-    public void init() {
-        try {
-            Class.forName("com.mysql.cj.jdbc.Driver");
-            Connection conn = DriverManager.getConnection(
-                "jdbc:mysql://localhost:3306/yourdb", "user", "pass"
-            );
-            gradeDAO = new GradeDAO(conn);
-        } catch (Exception e) {
-            throw new RuntimeException("Database connection failed", e);
-        }
-    }
+    private GradeDAO gradeDAO;
+    private ExamDAO examDAO;
+    private StudentDAO studentDAO;
 
     @Override
-    protected void doPost(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
-        request.setCharacterEncoding("UTF-8");
-
-        try {
-            int studentId = Integer.parseInt(request.getParameter("studentId"));
-            int subjectId = Integer.parseInt(request.getParameter("subjectId"));
-            double marks = Double.parseDouble(request.getParameter("marks"));
-
-            Grade grade = new Grade();
-            grade.setStudentId(studentId);
-            grade.setSubjectId(subjectId);
-            grade.setMarks(marks);
-            grade.assignGradeFromMarks();
-
-            gradeDAO.addGrade(grade);
-            response.sendRedirect("GradeServlet");
-        } catch (Exception e) {
-            throw new ServletException("Error submitting grade", e);
-        }
+    public void init() {
+        gradeDAO = new GradeDAO();
+        examDAO = new ExamDAO();
+        studentDAO = new StudentDAO();
     }
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        String student = request.getParameter("studentId");
-        String subject = request.getParameter("subjectId");
-        List<Grade> grades;
-
+        List<Exam> examList = null;
         try {
-            if (student != null && !student.trim().isEmpty()) {
-                grades = gradeDAO.getGradesByStudentId(Integer.parseInt(student));
-            } else if (subject != null && !subject.trim().isEmpty()) {
-                grades = gradeDAO.getGradesBySubjectId(Integer.parseInt(subject));
-            } else {
-                grades = gradeDAO.getAllGrades();
-            }
-
-            request.setAttribute("grades", grades);
-            RequestDispatcher dispatcher = request.getRequestDispatcher("grade_list.jsp");
-            dispatcher.forward(request, response);
-        } catch (Exception e) {
-            throw new ServletException("Error fetching grade list", e);
+            examList = examDAO.getExamsBySubject(1); // Replace with dynamic subject if needed
+        } catch (ClassNotFoundException ex) {
+            Logger.getLogger(GradeServlet.class.getName()).log(Level.SEVERE, null, ex);
         }
+        List<Student> studentList = null;
+        try {
+            studentList = studentDAO.getAllStudents();
+        } catch (ClassNotFoundException ex) {
+            Logger.getLogger(GradeServlet.class.getName()).log(Level.SEVERE, null, ex);
+        }
+
+        request.setAttribute("examList", examList);
+        request.setAttribute("studentList", studentList);
+        request.getRequestDispatcher("grade_entry.jsp").forward(request, response);
+
+    }
+
+    @Override
+    protected void doPost(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        int examId = Integer.parseInt(request.getParameter("exam_id"));
+        String[] studentIds = request.getParameterValues("student_id");
+
+        for (String sid : studentIds) {
+            int studentId = Integer.parseInt(sid);
+            int marks = Integer.parseInt(request.getParameter("marks_" + sid));
+            try {
+                gradeDAO.addGrade(new Grade(0, studentId, examId, marks));
+            } catch (ClassNotFoundException ex) {
+                Logger.getLogger(GradeServlet.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
+
+        response.sendRedirect("grade");
     }
 }
